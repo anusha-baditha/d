@@ -8,8 +8,8 @@ import os
 import razorpay
 import re
 import pdfkit
-application=Flask(__name__)
-application.config['SESSION_TYPE']='filesystem'
+app=Flask(__name__)
+app.config['SESSION_TYPE']='filesystem'
 #config=pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
 RAZORPAY_KEY_ID='rzp_test_RXy19zNlFo9p8F'
 RAZORPAY_KEY_SECRET='eIHxmEyJqhKz2l0tHEy7KkkC'
@@ -24,16 +24,16 @@ with mysql.connector.connect(host=host,password=password,db=db,user=user,port=po
     cursor=conn.cursor()
     cursor.execute("CREATE TABLE if not exists usercreate (username varchar(50) NOT NULL user_email varchar(100) NOT NULL,address text NOT NULL,password varbinary(20) NOT NULL,gender enum('Male','Female') DEFAULT NULL,PRIMARY KEY (user_email),UNIQUE KEY username (username)")
     cursor.execute("CREATE TABLE if not exists admincreate (email varchar(50) NOT NULL,username varchar(100) NOT NULL,password varbinary(10) NOT NULL,address text NOT NULL,accept enum('on','off') DEFAULT NULL,dp_image varchar(50) DEFAULT NULL,ph_no bigint DEFAULT NULL,PRIMARY KEY (email),UNIQUE KEY ph_no (ph_no))")
-    cursor.execute("CREATE TABLE if not exists items (item_id binary(16) NOT NULL,item_name varchar(255) NOT NULL,quantity int unsigned DEFAULT NULL,price decimal(14,4) NOT NULL,category enum('Home_applicationliances','Electronics','Fashion','Grocery') DEFAULT NULL,image_name varchar(255) NOT NULL,added_by varchar(50) DEFAULT NULL,description longtext,PRIMARY KEY (item_id),KEY added_by (added_by),CONSTRAINT items_ibfk_1 FOREIGN KEY (added_by) REFERENCES admincreate (email) ON DELETE CASCADE ON UPDATE CASCADE)")
+    cursor.execute("CREATE TABLE if not exists items (item_id binary(16) NOT NULL,item_name varchar(255) NOT NULL,quantity int unsigned DEFAULT NULL,price decimal(14,4) NOT NULL,category enum('Home_appliances','Electronics','Fashion','Grocery') DEFAULT NULL,image_name varchar(255) NOT NULL,added_by varchar(50) DEFAULT NULL,description longtext,PRIMARY KEY (item_id),KEY added_by (added_by),CONSTRAINT items_ibfk_1 FOREIGN KEY (added_by) REFERENCES admincreate (email) ON DELETE CASCADE ON UPDATE CASCADE)")
     cursor.execute("CREATE TABLE if not exists reviews (username varchar(30) NOT NULL,itemid binary(16) NOT NULL,title tinytext,review text,rating int DEFAULT NULL,date datetime DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY (itemid,username),KEY username (username),CONSTRAINT reviews_ibfk_1 FOREIGN KEY (itemid) REFERENCES items (item_id) ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT reviews_ibfk_2 FOREIGN KEY (username) REFERENCES usercreate (user_email) ON DELETE CASCADE ON UPDATE CASCADE)")
     cursor.execute("CREATE TABLE if not exists contactus (name varchar(100) DEFAULT NULL,email varchar(100) DEFAULT NULL,message text)")
     cursor.execute("CREATE TABLE if not exists orders (orderid bigint NOT NULL AUTO_INCREMENT,itemid binary(16) DEFAULT NULL,item_name longtext,qty int DEFAULT NULL,total_price bigint DEFAULT NULL,user varchar(100) DEFAULT NULL,PRIMARY KEY (orderid),KEY user (user),KEY itemid (itemid),CONSTRAINT orders_ibfk_1 FOREIGN KEY (user) REFERENCES usercreate (user_email)CONSTRAINT orders_ibfk_2 FOREIGN KEY (itemid) REFERENCES items (item_id))")
 mydb=mysql.connector.connect(host=host,user=user,password=password,db=db,port=port)
-application.secret_key=b'\x8e\xe0\xa5\xd9\x9c'
-@application.route('/')
+app.secret_key=b'\x8e\xe0\xa5\xd9\x9c'
+@app.route('/')
 def home():
     return render_template('welcome.html')
-@application.route('/index')
+@app.route('/index')
 def index():
     cursor=mydb.cursor(buffered=True)
     cursor.execute('select bin_to_uuid(item_id),item_name,image_name,price,quantity,category,description from items')
@@ -41,7 +41,7 @@ def index():
     print(item_data)
     return render_template('index.html',item_data=item_data)
 #admin-loginsystem
-@application.route('/admincreate',methods=['GET','POST'])
+@app.route('/admincreate',methods=['GET','POST'])
 def admincreate():
     if request.method=='POST':
         username=request.form['username']
@@ -66,7 +66,7 @@ def admincreate():
         else:
             return 'something went wrong'
     return render_template('admincreate.html')
-@application.route('/adminverify/<var1>',methods=['GET','POST'])
+@app.route('/adminverify/<var1>',methods=['GET','POST'])
 def adminverify(var1):
     try:
         regdata=dtoken(data=var1)
@@ -87,7 +87,7 @@ def adminverify(var1):
             else:
                 return 'Wrong OTP'
     return render_template('adminotp.html')
-@application.route('/adminlogin',methods=['GET','POST'])
+@app.route('/adminlogin',methods=['GET','POST'])
 def adminlogin():
     if session.get('email'):
         return redirect(url_for('adminpanel'))
@@ -121,10 +121,10 @@ def adminlogin():
                 flash('Invalid Input for email.')
                 return redirect(url_for('adminlogin'))
     return render_template('adminlogin.html')
-@application.route('/adminpanel')
+@app.route('/adminpanel')
 def adminpanel():
     return render_template('adminpanel.html')
-@application.route('/additem',methods=['GET','POST'])
+@app.route('/additem',methods=['GET','POST'])
 def additem():
     if not session.get('email'):
         return redirect(url_for('adminlogin'))
@@ -148,7 +148,7 @@ def additem():
             cursor.close()
             flash(f'Item {item_name} added successfully')
     return render_template('additem.html')      
-@application.route('/adminlogout')
+@app.route('/adminlogout')
 def adminlogout():
     if session.get('email'):
         session.pop('email')
@@ -156,7 +156,7 @@ def adminlogout():
     else:
         return redirect(url_for('adminlogin'))
 
-@application.route('/viewall_items')
+@app.route('/viewall_items')
 def viewall_items():
     if not session.get('email'):
         return redirect(url_for('adminlogin'))
@@ -169,7 +169,7 @@ def viewall_items():
             return render_template('viewall_items.html',item_data=item_data)
         else:
             return 'No items added.'
-@application.route('/view_item/<itemid>')
+@app.route('/view_item/<itemid>')
 def view_item(itemid):
     if not session.get('email'):
         return redirect(url_for('adminlogin'))
@@ -182,7 +182,7 @@ def view_item(itemid):
             return render_template('view_item.html',item_data=item_data)
         else:
             return 'something went wrong' 
-@application.route('/delete_item/<itemid>')
+@app.route('/delete_item/<itemid>')
 def delete_item(itemid):
     if not session.get('email'):
         return redirect(url_for('adminlogin'))
@@ -193,7 +193,7 @@ def delete_item(itemid):
         cursor.close()
         flash(f'{itemid} deleted successfully.')
         return redirect(url_for('viewall_items'))
-@application.route('/update_item/<itemid>',methods=['GET','POST'])
+@app.route('/update_item/<itemid>',methods=['GET','POST'])
 def update_item(itemid):
     if not session.get('email'):
         return redirect(url_for('adminlogin'))
@@ -227,7 +227,7 @@ def update_item(itemid):
             return render_template('update_item.html',item_data=item_data)
         else:
             return 'something went wrong '
-@application.route('/adminprofile_update',methods=['GET','POST'])  
+@app.route('/adminprofile_update',methods=['GET','POST'])  
 def adminprofile_update():
     if not session.get('email'):
         return redirect(url_for('adminlogin'))
@@ -261,7 +261,7 @@ def adminprofile_update():
             return render_template('adminupdate.html',admin_data=admin_data)
         else:
             return 'Something went wrong'
-@application.route('/usercreate',methods=['GET','POST'])
+@app.route('/usercreate',methods=['GET','POST'])
 def usercreate():
     if request.method=='POST':
         username=request.form['name']
@@ -287,7 +287,7 @@ def usercreate():
         else:
             return 'something went wrong'
     return render_template('usersignup.html')
-@application.route('/userverify/<var1>',methods=['GET','POST'])
+@app.route('/userverify/<var1>',methods=['GET','POST'])
 def userverify(var1):
     try:
         regdata=dtoken(data=var1)
@@ -307,7 +307,7 @@ def userverify(var1):
             else:
                 return 'Wrong OTP'
     return render_template('userotp.html')
-@application.route('/userlogin',methods=['GET','POST'])
+@app.route('/userlogin',methods=['GET','POST'])
 def userlogin():
     if session.get('useremail'):
         return redirect(url_for('index'))
@@ -343,7 +343,7 @@ def userlogin():
                 flash('Invalid Input for email.')
                 return redirect(url_for('userlogin'))
     return render_template('userlogin.html')
-@application.route('/dashboard/<category>')
+@app.route('/dashboard/<category>')
 def dashboard(category):
     cursor=mydb.cursor(buffered=True)
     cursor.execute('select bin_to_uuid(item_id),item_name,description,price,quantity,image_name,category from items where category=%s',[category])
@@ -353,7 +353,7 @@ def dashboard(category):
         return render_template('dashboard.html',items_data=items_data)
     else:
         return 'items not found'
-@application.route('/description/<itemid>')
+@app.route('/description/<itemid>')
 def description(itemid):
     cursor=mydb.cursor(buffered=True)
     cursor.execute('select bin_to_uuid(item_id),item_name,description,price,category,image_name,quantity from items where item_id=uuid_to_bin(%s)',[itemid])
@@ -363,7 +363,7 @@ def description(itemid):
         return render_template('description.html',item_data=item_data)
     else:
         return 'no item found'
-@application.route('/addreview/<itemid>',methods=['GET','POST'])
+@app.route('/addreview/<itemid>',methods=['GET','POST'])
 def addreview(itemid):
     if session.get('useremail'):
         if request.method=='POST':
@@ -379,7 +379,7 @@ def addreview(itemid):
         return render_template('review.html')
     else:
         return redirect(url_for('userlogin'))
-@application.route('/readreview/<itemid>')
+@app.route('/readreview/<itemid>')
 def readreview(itemid):
     cursor=mydb.cursor(buffered=True)
     cursor.execute('select * from reviews where itemid=uuid_to_bin(%s)',[itemid])
@@ -392,7 +392,7 @@ def readreview(itemid):
     else:
         flash('No reviews found')
         return redirect(url_for('description',itemid=itemid))
-@application.route('/addcart/<itemid>/<name>/<category>/<float:price>/<image>/<quantity>')
+@app.route('/addcart/<itemid>/<name>/<category>/<float:price>/<image>/<quantity>')
 def addcart(itemid,name,category,price,image,quantity):
     if not session.get('useremail'):
         return redirect(url_for('userlogin'))
@@ -406,7 +406,7 @@ def addcart(itemid,name,category,price,image,quantity):
         session[session.get('useremail')][itemid][2]+=1
         flash('item already existed')
         return redirect(url_for('index'))
-@application.route('/viewcart')
+@app.route('/viewcart')
 def viewcart():
     if not session.get('useremail'):
         return redirect(url_for('userlogin'))
@@ -417,20 +417,20 @@ def viewcart():
     if items=='empty':
         return 'No Products added to cart'
     return render_template('cart.html',items=items)
-@application.route('/remove/<itemid>')
+@app.route('/remove/<itemid>')
 def remove(itemid):
     if session.get('useremail'):
         session[session.get('useremail')].pop(itemid)
         session.modified=True
         return redirect(url_for('viewcart'))
     return redirect(url_for('userlogin'))
-@application.route('/userlogout')
+@app.route('/userlogout')
 def userlogout():
     if session.get('useremail'):
         session.pop('useremail')
         return redirect(url_for('userlogin'))
     return redirect(url_for('userlogin'))
-@application.route('/pay/<itemid>/<name>/<float:price>',methods=['GET','POST'])
+@app.route('/pay/<itemid>/<name>/<float:price>',methods=['GET','POST'])
 def pay(itemid,name,price):
     try:
     
@@ -451,7 +451,7 @@ def pay(itemid,name,price):
         #Log the error and return a 400 response
         print(f'Error creating order: {str(e)}')
         return str(e),400
-@application.route('/success',methods=['POST'])
+@app.route('/success',methods=['POST'])
 def success():
     #extract payment details from the form
     payment_id=request.form.get('razorpay_payment_id')
@@ -477,7 +477,7 @@ def success():
         return redirect(url_for('orders'))
     except razorpay.errors.SignatureVerificationError:
         return 'Payment verification failed!',400
-@application.route('/orders')
+@app.route('/orders')
 def orders():
     if session.get('useremail'):
         cursor=mydb.cursor(buffered=True)
@@ -487,7 +487,7 @@ def orders():
         return render_template('orders.html',user_orders=user_orders)
     else:
         return redirect(url_for('userlogin'))
-@application.route('/search',methods=['GET','POST'])
+@app.route('/search',methods=['GET','POST'])
 def search():
     if request.method=='POST':
         name=request.form['search']
@@ -503,7 +503,7 @@ def search():
         else:
             flash('Result not found')
     return render_template('index.html')
-@application.route('/contactus',methods=['GET','POST'])
+@app.route('/contactus',methods=['GET','POST'])
 def contactus():
     if request.method=='POST':
         name=request.form['title']
@@ -515,7 +515,7 @@ def contactus():
         cursor.close()
         return redirect(url_for('contactus'))
     return render_template('contact.html')
-'''@application.route('/billdetails/<ordid>.pdf')
+'''@app.route('/billdetails/<ordid>.pdf')
 def invoice(ordid):
     if session.get('useremail'):
         cursor=mydb.cursor(buffered=True)
@@ -531,8 +531,8 @@ def invoice(ordid):
         uaddress=data[1]
         html=render_template('bill.html',uname=uname,uaddress=uaddress,oname=oname,qty=qty,cost=cost)
         pdf=pdfkit.from_string(html,False,configuration=config)
-        response=Response(pdf,content_type='applicationlication/pdf')
+        response=Response(pdf,content_type='application/pdf')
         response.headers['Content-Disposition']='inline; filename=output.pdf'
         return response'''
 if __name__=='__main__':
-    application.run()
+    app.run()
